@@ -36,8 +36,7 @@ public class Start implements CommandLineRunner {
 
     public Start()
     {
-        setDefaults();
-        image = new BufferedImage(x_dim, y_dim, BufferedImage.TYPE_BYTE_GRAY);
+
     }
 
 
@@ -51,13 +50,16 @@ public class Start implements CommandLineRunner {
         y_dim = 1000;
         numberOfIterations = 20;
         divisions = 10;
-        /*C_re_step = (C_re_max - C_re_min) / (double) x_dim;
-        C_im_step = (C_im_max - C_im_min) / (double) y_dim;*/
+        image = new BufferedImage(x_dim, y_dim, BufferedImage.TYPE_BYTE_GRAY);
+        loadBalancer.getServers().clear();
+        loadBalancer.getServers().add("http://localhost:8090");
+        loadBalancer.getLatestFreeServers().clear();
+        loadBalancer.setInitialDistribution(0);
     }
 
 
 
-
+    // This method splits the work in tasks to be calculated separately.
     public void calculateMandelbrot()
     {
         int numberOfThreads = 6 * loadBalancer.getServers().size();
@@ -65,11 +67,10 @@ public class Start implements CommandLineRunner {
         double C_re_step = (C_re_max - C_re_min) / (double) x_dim;
         double C_im_step = (C_im_max - C_im_min) / (double) y_dim;
 
-
-        // Split the job in tasks to be calculated separately.
         for (int x = 0; x < x_dim / divisions; x++) {
             for (int y = 0; y < y_dim / divisions; y++) {
-                MandelbrotCalc mc = new MandelbrotCalc(C_re_min + x * divisions * C_re_step,
+                MandelbrotCalc mc = new MandelbrotCalc(
+                        C_re_min + x * divisions * C_re_step,
                         C_re_min + (x + 1) * divisions * C_re_step,
                         C_im_min + y * divisions * C_im_step,
                         C_im_min + (y + 1) * divisions * C_im_step,
@@ -81,46 +82,48 @@ public class Start implements CommandLineRunner {
             }
         }
 
-        drawPicture();
+        executor.shutdown();
+        createFinalImage();
+        writeImageToFile();
     }
 
 
 
-
-    private void drawPicture()
+    // This method takes the calculated image parts from the results queue, and coalesce them
+    // into the final image.
+    private void createFinalImage()
     {
-        // This method takes the calculated image parts from the results queue, and coalesce them
-        // to the final image.
-
         int parts = (x_dim / divisions) * (x_dim / divisions);
 
-        for(int i = 0; i < parts; i++)
-        {
+        for (int i = 0; i < parts; i++) {
             try {
                 MandelbrotResult mandelbrotResult = results.take();
 
                 int x_start = mandelbrotResult.getX_start();
                 int y_start = mandelbrotResult.getY_start();
 
-                for(int x = 0; x < divisions; x++)
-                {
-                    for(int y = 0; y < divisions; y++)
-                    {
+                for (int x = 0; x < divisions; x++) {
+                    for (int y = 0; y < divisions; y++) {
                         int greyScale = mandelbrotResult.getResults().get(x * divisions + y);
                         int RGB = greyScale << 16 | greyScale << 8 | greyScale;
                         image.setRGB(x_start + x, y_start + y, RGB);
                     }
                 }
+            } catch (InterruptedException e) {
+                e.printStackTrace();
             }
-            catch (InterruptedException e) { e.printStackTrace(); }
 
             //System.out.println("Parts fixed at this moment: " + (i + 1));
         }
+    }
 
+
+    private void writeImageToFile()
+    {
         try
         {
             ImageIO.write(image, "png", file);
-            System.out.println("The image is ready. \n");
+            System.out.println("\nThe image is ready! \n");
         }
         catch(IOException e) {
             System.out.println("Something went wrong when writing the image to file.");
@@ -133,8 +136,6 @@ public class Start implements CommandLineRunner {
 
     private void restartApplication()
     {
-        loadBalancer.getServers().clear();
-        loadBalancer.getServers().add("http://localhost:8090");
         setDefaults();
         showMenu();
     }
@@ -145,9 +146,14 @@ public class Start implements CommandLineRunner {
 
     @Override
     public void run(String... args) throws Exception {
+        setDefaults();
         showMenu();
     }
 
+
+
+
+    // Below are methods that manage the console interface.
 
 
     private void showMenu()
@@ -162,8 +168,8 @@ public class Start implements CommandLineRunner {
 
     private void getInputFromUser()
     {
-        System.out.println("This is the default values. Copy and paste them, and make changes as you like. \n" +
-                "Note that you can add additional servers, just leave a space between them. \n \n" +
+        System.out.println("These are the default values. Copy and paste them, and make changes as you like. \n" +
+                "Note that you can also add additional servers, just leave a space between them. \n \n" +
                 "C_re_min  C_re_max  C_im_min  C_im_max  x_pixels  y_pixels  n_max  divisions  list_of_servers \n" +
                 "-2.25     0.75       -1.5      1.5       1000      1000      20     10        http://localhost:8090");
 
@@ -191,14 +197,14 @@ public class Start implements CommandLineRunner {
                     break;
 
                 default:
-                    System.out.println("You can only chose from the menu values. \n");
+                    System.out.println("You can only choose between existing alternatives. \n");
                     showMenu();
                     break;
             }
         }
         else
         {
-            System.out.println("You can only chose from the menu values. \n");
+            System.out.println("You can only choose between existing alternatives. \n");
             showMenu();
         }
     }
@@ -232,12 +238,12 @@ public class Start implements CommandLineRunner {
         numberOfIterations = Integer.parseInt(input[6]);
         divisions = Integer.parseInt(input[7]);
 
-        loadBalancer.getServers().clear();
-
         for(int i = 8; i < input.length; i++)
         {
             loadBalancer.getServers().add(input[i]);
         }
+
+        image = new BufferedImage(x_dim, y_dim, BufferedImage.TYPE_BYTE_GRAY);
     }
 
 

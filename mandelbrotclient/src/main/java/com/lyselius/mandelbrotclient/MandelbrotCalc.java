@@ -1,10 +1,13 @@
 package com.lyselius.mandelbrotclient;
 
+import org.springframework.http.HttpStatus;
 import org.springframework.web.reactive.function.client.WebClient;
+import org.springframework.web.reactive.function.client.WebClientResponseException;
+import reactor.core.publisher.Mono;
 
 import java.time.Duration;
 import java.util.concurrent.ArrayBlockingQueue;
-
+import java.util.concurrent.TimeoutException;
 
 
 public class MandelbrotCalc implements Runnable {
@@ -40,18 +43,24 @@ public class MandelbrotCalc implements Runnable {
 
 
     @Override
-    public void run() {
-        getResult(loadBalancer.getServer());
-    }
+    public void run()
+    {
+        String serverURI = loadBalancer.getServer();
+        MandelbrotResult mandelbrotResult = null;
+
+        while(true)
+        {
+            mandelbrotResult = callServer(serverURI);
+            if(mandelbrotResult != null) { break; }
+            // If something went wrong, assign a new server and try again.
+            serverURI = loadBalancer.getRandomServer();
+        }
 
 
-    private void getResult(String serverURI) {
-        MandelbrotResult mandelbrotResult = callServer(serverURI);
-
-        // Tell load balancer that this server now has an open spot.
+        // Tell the load balancer that this server now has an open spot.
         loadBalancer.setLatestFreeServer(serverURI);
 
-        // Update the result object with info about where in the final picture, this part should be.
+        // Update the result object with info about where in the final picture, this part should be placed.
         mandelbrotResult.setX_start(x_start);
         mandelbrotResult.setY_start(y_start);
 
@@ -59,12 +68,14 @@ public class MandelbrotCalc implements Runnable {
     }
 
 
-    private MandelbrotResult callServer(String serverURI) {
 
-        MandelbrotResult mandelbrotResult = null;
+
+
+
+    private MandelbrotResult callServer(String serverURI){
 
         try {
-            mandelbrotResult = WebClient.builder().build()
+            MandelbrotResult mandelbrotResult = WebClient.builder().build()
                     .get()
                     .uri(serverURI + "/mandelbrot/" + C_re_min + "/" + C_re_max + "/"
                             + C_im_min + "/" + C_im_max + "/" + x_dim + "/" + y_dim +
@@ -73,31 +84,23 @@ public class MandelbrotCalc implements Runnable {
                     .bodyToMono(MandelbrotResult.class)
                     .timeout(Duration.ofMillis(4000))
                     .block();
+
+            return mandelbrotResult;
         }
 
-         /* If the server takes more than 4 seconds to respond, this try is terminated and a new
-         try will be made with a randomly assigned server. The solution below with catching "Exception"
-         is obviously fishy, but for some reason the compiler will not accept a Java.util.concurrent.exception
-         in the catch clause, even though that is what is eventually caught in case of a timeout.
-         Look in to this later. */
-        catch (Exception e) {
-            e.printStackTrace();
-            getResult(loadBalancer.getRandomServer());
+         /* For some reason the compiler will not accept a Java.util.concurrent.exception
+         in the catch clause, even though that is what is eventually caught in case of a timeout
+         from the Mono. Look in to this later. */
+        catch (WebClientResponseException e)
+        {
+            System.out.println(e.toString());
+            return null;
         }
-
-        return mandelbrotResult;
+        catch(Exception e)
+        {
+            System.out.println(e.toString());
+            return null;
+        }
     }
 
-
-
-   /* private WebClient getWebClient()
-    {
-        HttpClient httpClient = HttpClient.create()
-                .doOnConnected(conn -> conn
-                        .addHandlerLast(new ReadTimeoutHandler(4)));
-
-        return WebClient.builder()
-                .clientConnector(new ReactorClientHttpConnector(httpClient))
-                .build();
-    }*/
 }

@@ -13,23 +13,21 @@ public class LoadBalancer {
 
 
     private int initialDistribution = 0;
-
-
     private List<String> servers = new ArrayList<>();
+    private ArrayBlockingQueue<String> latestFreeServers = new ArrayBlockingQueue<String>(20);
 
-    private ArrayBlockingQueue<String> latestFreeServer = new ArrayBlockingQueue<String>(20);
 
 
 
     public LoadBalancer()
     {
-        servers.add("http://localhost:8090");
+
     }
 
 
-    // Distributes the servers evenly to start with, and thereafter gives every thread the server
-    // with the latest free spot.
-    public String getServer()
+    // Distributes the servers evenly to start with, and thereafter gives every returning thread
+    // the server with the latest free spot.
+    public synchronized String getServer()
     {
         if(initialDistribution < 6 * servers.size())
         {
@@ -50,18 +48,35 @@ public class LoadBalancer {
 
 
     public String getLatestFreeServer() {
-        try { return latestFreeServer.take(); }
+        try { return latestFreeServers.take(); }
         catch (InterruptedException e) { e.printStackTrace(); }
         return getRandomServer();
     }
 
     public void setLatestFreeServer(String server) {
-        latestFreeServer.add(server);
+        latestFreeServers.add(server);
     }
 
     public String getRandomServer()
     {
         Random random = new Random();
         return servers.get(random.nextInt(servers.size()));
+    }
+
+    public int getInitialDistribution() {
+        return initialDistribution;
+    }
+
+    public void setInitialDistribution(int initialDistribution) {
+        this.initialDistribution = initialDistribution;
+    }
+
+
+    public ArrayBlockingQueue<String> getLatestFreeServers() {
+        return latestFreeServers;
+    }
+
+    public void setLatestFreeServers(ArrayBlockingQueue<String> latestFreeServers) {
+        this.latestFreeServers = latestFreeServers;
     }
 }
