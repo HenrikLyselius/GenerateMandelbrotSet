@@ -90,7 +90,7 @@ public class MandelbrotCalc implements Runnable {
         }
 
          /* For some reason the compiler will not accept a Java.util.concurrent.exception
-         in the catch clause, even though that is what is eventually caught in case of a timeout
+         in the second catch clause, even though that is what is eventually caught in case of a timeout
          from the Mono. Look in to this later. */
         catch (WebClientResponseException e)
         {

@@ -11,7 +11,7 @@ import org.springframework.web.bind.annotation.*;
 public class MandelbrotResultResource {
 
 
-    int counter = 1;
+
 
     @RequestMapping(method= RequestMethod.GET, value ="/mandelbrot/{C_re_min}/{C_re_max}/{C_im_min}/{C_im_max}/{x_dim}/{y_dim}/{maxNumberOfIterations}")
     public ResponseEntity<MandelbrotResult> calculateMandelbrot(@PathVariable double C_re_min,
@@ -25,8 +25,6 @@ public class MandelbrotResultResource {
         MandelbrotResult mandelbrotResult = MandelbrotCalc.getResults(C_re_min, C_re_max, C_im_min, C_im_max,
                 x_dim, y_dim, maxNumberOfIterations);
 
-        /*System.out.println("Counter is: " +   counter);
-        counter++;*/
 
         return ResponseEntity.ok(mandelbrotResult);
 

@@ -43,13 +43,13 @@ public class Start implements CommandLineRunner {
     private void setDefaults()
     {
         C_re_min = -2.25;
-        C_re_max = 10;
+        C_re_max = 0.75;
         C_im_min = -1.5;
         C_im_max = 1.5;
         x_dim = 1000;
         y_dim = 1000;
         numberOfIterations = 20;
-        divisions = 10;
+        divisions = 100;
         image = new BufferedImage(x_dim, y_dim, BufferedImage.TYPE_BYTE_GRAY);
         loadBalancer.getServers().clear();
         loadBalancer.getServers().add("http://localhost:8090");
@@ -108,7 +108,8 @@ public class Start implements CommandLineRunner {
                 for (int x = 0; x < divisions; x++) {
                     for (int y = 0; y < divisions; y++) {
                         int greyScale = mandelbrotResult.getResults().get(x * divisions + y);
-                        int RGB = greyScale << 16 | greyScale << 8 | greyScale;
+                        //int RGB = greyScale << 16 | greyScale << 8 | greyScale;
+                        int RGB = greyScale << 16 | greyScale << 8;
                         image.setRGB(x_start + x, (y_dim - 1)  - (y_start + y), RGB);
                     }
                 }
@@ -123,8 +124,6 @@ public class Start implements CommandLineRunner {
 
     private void writeImageToFile()
     {
-
-        System.out.println("Här i writeimage är det.");
         try
         {
             ImageIO.write(image, "png", file);
@@ -163,9 +162,9 @@ public class Start implements CommandLineRunner {
 
     private void showMenu()
     {
-        System.out.println("Menu: \n" +
+        System.out.println("\nMenu: \n" +
                 "1. Run with default settings. \n" +
-                "2. Manually enter values");
+                "2. Manually enter values.");
         checkMenuChoice();
     }
 
@@ -173,10 +172,10 @@ public class Start implements CommandLineRunner {
 
     private void getInputFromUser()
     {
-        System.out.println("These are the default values. Copy and paste them, and make changes as you like. \n" +
+        System.out.println("\nThese are the default values. Copy and paste them, and make changes as you like. \n" +
                 "Note that you can also add additional servers, just leave a space between them. \n \n" +
                 "C_re_min  C_re_max  C_im_min  C_im_max  x_pixels  y_pixels  n_max  divisions  list_of_servers \n" +
-                "-2.25     0.75       -1.5      1.5       1000      1000      20     10        http://localhost:8090");
+                "-2.25     0.75       -1.5      1.5       1000      1000      20     100       http://localhost:8090");
 
         readInputFromUser();
     }
@@ -243,6 +242,7 @@ public class Start implements CommandLineRunner {
         numberOfIterations = Integer.parseInt(input[6]);
         divisions = Integer.parseInt(input[7]);
 
+        loadBalancer.getServers().clear();
         for(int i = 8; i < input.length; i++)
         {
             loadBalancer.getServers().add(input[i]);
