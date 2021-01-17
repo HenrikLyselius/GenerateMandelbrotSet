@@ -1,13 +1,10 @@
 package com.lyselius.mandelbrotclient;
 
-import org.springframework.http.HttpStatus;
 import org.springframework.web.reactive.function.client.WebClient;
 import org.springframework.web.reactive.function.client.WebClientResponseException;
-import reactor.core.publisher.Mono;
 
 import java.time.Duration;
 import java.util.concurrent.ArrayBlockingQueue;
-import java.util.concurrent.TimeoutException;
 
 
 public class MandelbrotCalc implements Runnable {
@@ -67,9 +64,6 @@ public class MandelbrotCalc implements Runnable {
         try { results.put(mandelbrotResult); }
         catch (InterruptedException e) { e.printStackTrace(); }
     }
-
-
-
 
 
 
