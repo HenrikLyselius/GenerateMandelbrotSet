@@ -64,7 +64,8 @@ public class MandelbrotCalc implements Runnable {
         mandelbrotResult.setX_start(x_start);
         mandelbrotResult.setY_start(y_start);
 
-        results.add(mandelbrotResult);
+        try { results.put(mandelbrotResult); }
+        catch (InterruptedException e) { e.printStackTrace(); }
     }
 
 

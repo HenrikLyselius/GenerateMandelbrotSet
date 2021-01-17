@@ -28,7 +28,7 @@ public class Start implements CommandLineRunner {
     private int y_dim;
     private int numberOfIterations;
     private int divisions;
-    private ArrayBlockingQueue<MandelbrotResult> results = new ArrayBlockingQueue<MandelbrotResult>(1000000);
+    private ArrayBlockingQueue<MandelbrotResult> results = new ArrayBlockingQueue<MandelbrotResult>(60);
     private BufferedImage image;
     private File file = new File("C:\\BilderJava\\pixelbildParallelliserad2.png");
     private Scanner scanner = new Scanner(System.in);
@@ -43,7 +43,7 @@ public class Start implements CommandLineRunner {
     private void setDefaults()
     {
         C_re_min = -2.25;
-        C_re_max = 0.75;
+        C_re_max = 10;
         C_im_min = -1.5;
         C_im_max = 1.5;
         x_dim = 1000;
@@ -93,7 +93,7 @@ public class Start implements CommandLineRunner {
     // into the final image.
     private void createFinalImage()
     {
-        int parts = (x_dim / divisions) * (x_dim / divisions);
+        int parts = (x_dim / divisions) * (y_dim / divisions);
 
         for (int i = 0; i < parts; i++) {
             try {
@@ -102,11 +102,14 @@ public class Start implements CommandLineRunner {
                 int x_start = mandelbrotResult.getX_start();
                 int y_start = mandelbrotResult.getY_start();
 
+                /*Note that the pixels in an image in Java are counted from the upper left corner,
+                  while the pixels in the parts are based on a "normal" coordinate system,
+                  hence the somewhat strange expression for the image y-values.*/
                 for (int x = 0; x < divisions; x++) {
                     for (int y = 0; y < divisions; y++) {
                         int greyScale = mandelbrotResult.getResults().get(x * divisions + y);
                         int RGB = greyScale << 16 | greyScale << 8 | greyScale;
-                        image.setRGB(x_start + x, y_start + y, RGB);
+                        image.setRGB(x_start + x, (y_dim - 1)  - (y_start + y), RGB);
                     }
                 }
             } catch (InterruptedException e) {
@@ -120,6 +123,8 @@ public class Start implements CommandLineRunner {
 
     private void writeImageToFile()
     {
+
+        System.out.println("Här i writeimage är det.");
         try
         {
             ImageIO.write(image, "png", file);
@@ -232,7 +237,7 @@ public class Start implements CommandLineRunner {
         C_re_min = Double.parseDouble(input[0]);
         C_re_max = Double.parseDouble(input[1]);
         C_im_min = Double.parseDouble(input[2]);
-        C_re_max = Double.parseDouble(input[3]);
+        C_im_max = Double.parseDouble(input[3]);
         x_dim = Integer.parseInt(input[4]);
         y_dim = Integer.parseInt(input[5]);
         numberOfIterations = Integer.parseInt(input[6]);
@@ -244,6 +249,11 @@ public class Start implements CommandLineRunner {
         }
 
         image = new BufferedImage(x_dim, y_dim, BufferedImage.TYPE_BYTE_GRAY);
+
+        /* Set the capacity of the results queue to ten times the amount of calculating threads that
+        will put result objects in it. That should clearly be sufficient (I suppose) to avoid any
+        unnecessary waiting. */
+        results = new ArrayBlockingQueue<MandelbrotResult>(10 * 6 * loadBalancer.getServers().size());
     }
 
 

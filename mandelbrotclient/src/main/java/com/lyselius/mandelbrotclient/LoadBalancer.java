@@ -25,7 +25,7 @@ public class LoadBalancer {
     }
 
 
-    // Distributes the servers evenly to start with, and thereafter gives every returning thread
+    // Distribute the servers evenly to start with, and then give every returning thread
     // the server with the latest free spot.
     public synchronized String getServer()
     {
